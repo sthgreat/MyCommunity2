@@ -1,4 +1,4 @@
-package com.dzkjdx.jsb.myseckill.pojo;
+package com.dzkjdx.jsb.mycommunity.pojo;
 
 import lombok.Data;
 

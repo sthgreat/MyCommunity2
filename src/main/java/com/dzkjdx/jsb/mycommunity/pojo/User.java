@@ -1,17 +1,21 @@
-package com.dzkjdx.jsb.myseckill.pojo;
+package com.dzkjdx.jsb.mycommunity.pojo;
+
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+@Data
 public class User {
     int id;
-    String sex;
+    String userSex;
+    String email;
     String userPhoneNumber;
     String userName;
     String userPassword;
     BigDecimal userMoney;
-    int userTotalArticle;
-    int userTotalPraise;
+    Integer userTotalArticle;
+    Integer userTotalPraise;
     Timestamp createTime;
     Timestamp updateTime;
 }
