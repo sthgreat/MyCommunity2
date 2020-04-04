@@ -9,7 +9,7 @@ import javax.validation.constraints.NotBlank;
 public class UserRegisterForm {
     int id;
     @NotBlank(message = "性别不能为空！")
-    String sex;
+    String userSex;
     @NotBlank(message = "号码不能为空！")
     String userPhoneNumber;
     @NotBlank(message = "昵称不能为空！")

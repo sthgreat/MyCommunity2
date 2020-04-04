@@ -1,17 +1,24 @@
 package com.dzkjdx.jsb.mycommunity.service;
 
+import com.alibaba.fastjson.JSON;
 import com.dzkjdx.jsb.mycommunity.Enum.StatusCode;
+import com.dzkjdx.jsb.mycommunity.constant.RedisConst;
 import com.dzkjdx.jsb.mycommunity.dao.UserMapper;
 import com.dzkjdx.jsb.mycommunity.form.UserLoginForm;
 import com.dzkjdx.jsb.mycommunity.pojo.User;
 import com.dzkjdx.jsb.mycommunity.vo.ResponseVo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserService {
@@ -45,9 +52,57 @@ public class UserService {
                 StatusCode.REGISTER_SUCCESS.getDesc());
     }
 
-    public ResponseVo<User> login(UserLoginForm userLoginForm) {
-        //使用redis作分布式session
+    public ResponseVo<User> login(UserLoginForm userLoginForm,
+                                  HttpServletResponse response,
+                                  HttpSession session) {
+        //TODO 登陆时频繁查找数据库可能造成压力
+        //查数据库验证用户名与密码
+        String userName = userLoginForm.getUserName();
+        String password = DigestUtils.md5DigestAsHex(
+                userLoginForm.getUserPassWord().getBytes(StandardCharsets.UTF_8));
+        User user = userMapper.selectByUserName(userName);
+        if(user == null){
+            return ResponseVo.error(StatusCode.USER_NOT_EXIST);
+        }
+        if(!user.getUserPassword().equals(password)){
+            return ResponseVo.error(StatusCode.USERNAME_PASSWORD_WRONG);
+        }
 
-        return null;
+        //使用redis作分布式session（登陆时先验证本地session，然后验证分布式session，都没有就返回需要登陆）
+        String userString = JSON.toJSON(user).toString();
+        UUID uuid = UUID.randomUUID();
+        response.addCookie(new Cookie("UID", uuid + ""));
+        redisTemplate.opsForValue().set(RedisConst.USER_SESSION + uuid, userString,
+                10, TimeUnit.MINUTES);
+
+        //本地session保存
+        session.setAttribute("CurrentUser", userString);
+        return ResponseVo.success(StatusCode.LOGIN_SUCCESS.getCode(),
+                StatusCode.LOGIN_SUCCESS.getDesc());
+    }
+
+    public ResponseVo<User> logout(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        String uuid = null;
+        Cookie UidCookie = null;
+        for(Cookie cookie : cookies){
+            if(cookie.getName().equals("UID")){
+                UidCookie = cookie;
+                uuid = cookie.getValue();
+                UidCookie.setValue(null);
+            }
+        }
+        if(uuid!=null && uuid.length()!=0){
+            //删除redis的登录状态
+            redisTemplate.opsForValue().set(RedisConst.USER_SESSION + uuid, "");
+        }
+        //删除session的登录状态
+        request.getSession().removeAttribute("CurrentUser");
+
+        //删除cookie中的uid
+        response.addCookie(UidCookie);
+
+        return ResponseVo.success(StatusCode.LOGOUT_SUCCESS.getCode(),
+                StatusCode.LOGOUT_SUCCESS.getDesc());
     }
 }
