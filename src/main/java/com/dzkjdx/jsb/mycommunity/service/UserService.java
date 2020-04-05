@@ -1,12 +1,12 @@
 package com.dzkjdx.jsb.mycommunity.service;
 
-import com.alibaba.fastjson.JSON;
 import com.dzkjdx.jsb.mycommunity.Enum.StatusCode;
 import com.dzkjdx.jsb.mycommunity.constant.RedisConst;
 import com.dzkjdx.jsb.mycommunity.dao.UserMapper;
 import com.dzkjdx.jsb.mycommunity.form.UserLoginForm;
 import com.dzkjdx.jsb.mycommunity.pojo.User;
 import com.dzkjdx.jsb.mycommunity.vo.ResponseVo;
+import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -69,14 +69,15 @@ public class UserService {
         }
 
         //使用redis作分布式session（登陆时先验证本地session，然后验证分布式session，都没有就返回需要登陆）
-        String userString = JSON.toJSON(user).toString();
+        Gson gson = new Gson();
+        String userString = gson.toJson(user);
         UUID uuid = UUID.randomUUID();
         response.addCookie(new Cookie("UID", uuid + ""));
         redisTemplate.opsForValue().set(RedisConst.USER_SESSION + uuid, userString,
                 10, TimeUnit.MINUTES);
 
         //本地session保存
-        session.setAttribute("CurrentUser", userString);
+        session.setAttribute("CurrentUser", user);
         return ResponseVo.success(StatusCode.LOGIN_SUCCESS.getCode(),
                 StatusCode.LOGIN_SUCCESS.getDesc());
     }

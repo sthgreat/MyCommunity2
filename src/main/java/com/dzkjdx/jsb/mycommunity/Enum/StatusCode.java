@@ -20,6 +20,8 @@ public enum StatusCode {
 
     LOGOUT_SUCCESS(1007, "登出成功"),
 
+    NEED_LOGIN(1008,"未登录，需要登陆"),
+
     //5000为服务器本身有关
     ERROR(5001,"服务出错");
 
